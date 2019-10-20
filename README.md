@@ -1,4 +1,16 @@
-BrainTree
+Arduino BrainTree
+======
+
+This repository is BrainTree (leightweight Behavior Tree implementation) 
+port for Arduino AVR (Nano, Uno, Mega). You can find original Repository in
+(https://github.com/arvidsson/BrainTree)
+
+This port requires ArduinoSTL from here (https://github.com/mike-matera/ArduinoSTL)
+and modified version of shared_ptr (already attached, original: https://github.com/SRombauts/shared_ptr)
+
+Arduino Example Port included. For installation clone this repository to 
+your Arduino libraries folder.
+
 ======
 
 A C++ [behavior tree](http://gamasutra.com/blogs/ChrisSimpson/20140717/221339/Behavior_trees_for_AI_How_they_work.php) single header library.

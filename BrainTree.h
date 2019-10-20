@@ -2,13 +2,22 @@
 // Copyright 2015-2018 Par Arvidsson. All rights reserved.
 // Licensed under the MIT license (https://github.com/arvidsson/BrainTree/blob/master/LICENSE).
 
+
+// Port to Arduino - 2019
+// Ported to Arduino with the help of ArduinoSTL from here: 
+// (https://github.com/mike-matera/ArduinoSTL)
+// And minimal version of shared_ptr from here:
+// (https://github.com/SRombauts/shared_ptr)
+// shared_ptr is modified for Arduino and BrainTree demands
+
 #pragma once
 
-#include <memory>
+#include <ArduinoSTL.h>
+#include "shared_ptr.h"
 #include <vector>
+#include <map>
 #include <string>
-#include <unordered_map>
-#include <cassert>
+//#include <cassert>
 
 namespace BrainTree
 {
@@ -52,7 +61,7 @@ public:
 
     void reset() { status = Status::Invalid; }
 
-    using Ptr = std::shared_ptr<Node>;
+    using Ptr = shared_ptr<Node>;
 
 protected:
     Status status = Status::Invalid;
@@ -137,14 +146,14 @@ public:
     }
     bool hasString(std::string key) const  { return strings.find(key) != strings.end(); }
 
-    using Ptr = std::shared_ptr<Blackboard>;
+    using Ptr = Blackboard*;
 
 protected:
-    std::unordered_map<std::string, bool> bools;
-    std::unordered_map<std::string, int> ints;
-    std::unordered_map<std::string, float> floats;
-    std::unordered_map<std::string, double> doubles;
-    std::unordered_map<std::string, std::string> strings;
+    std::map<std::string, bool> bools;
+    std::map<std::string, int> ints;
+    std::map<std::string, float> floats;
+    std::map<std::string, double> doubles;
+    std::map<std::string, std::string> strings;
 };
 
 class Leaf : public Node
@@ -163,7 +172,7 @@ protected:
 class BehaviorTree : public Node
 {
 public:
-    BehaviorTree() : blackboard(std::make_shared<Blackboard>()) {}
+    BehaviorTree() : blackboard(new Blackboard()) {}
     BehaviorTree(const Node::Ptr &rootNode) : BehaviorTree() { root = rootNode; }
     
     Status update() { return root->tick(); }
@@ -188,7 +197,7 @@ public:
     template <class NodeType, typename... Args>
     CompositeBuilder<Parent> leaf(Args... args)
     {
-        auto child = std::make_shared<NodeType>((args)...);
+        shared_ptr<NodeType> child(new NodeType((args)...));
         node->addChild(child);
         return *this;
     }
@@ -196,7 +205,7 @@ public:
     template <class CompositeType, typename... Args>
     CompositeBuilder<CompositeBuilder<Parent>> composite(Args... args)
     {
-        auto child = std::make_shared<CompositeType>((args)...);
+        shared_ptr<CompositeType> child(new CompositeType((args)...));
         node->addChild(child);
         return CompositeBuilder<CompositeBuilder<Parent>>(this, (CompositeType*)child.get());
     }
@@ -204,7 +213,7 @@ public:
     template <class DecoratorType, typename... Args>
     DecoratorBuilder<CompositeBuilder<Parent>> decorator(Args... args)
     {
-        auto child = std::make_shared<DecoratorType>((args)...);
+        shared_ptr<DecoratorType> child(new DecoratorType((args)...));
         node->addChild(child);
         return DecoratorBuilder<CompositeBuilder<Parent>>(this, (DecoratorType*)child.get());
     }
@@ -228,7 +237,7 @@ public:
     template <class NodeType, typename... Args>
     DecoratorBuilder<Parent> leaf(Args... args)
     {
-        auto child = std::make_shared<NodeType>((args)...);
+        shared_ptr<NodeType> child(new NodeType((args)...));
         node->setChild(child);
         return *this;
     }
@@ -236,7 +245,7 @@ public:
     template <class CompositeType, typename... Args>
     CompositeBuilder<DecoratorBuilder<Parent>> composite(Args... args)
     {
-        auto child = std::make_shared<CompositeType>((args)...);
+        shared_ptr<CompositeType> child(new CompositeType((args)...));
         node->setChild(child);
         return CompositeBuilder<DecoratorBuilder<Parent>>(this, (CompositeType*)child.get());
     }
@@ -244,7 +253,7 @@ public:
     template <class DecoratorType, typename... Args>
     DecoratorBuilder<DecoratorBuilder<Parent>> decorator(Args... args)
     {
-        auto child = std::make_shared<DecoratorType>((args)...);
+        shared_ptr<DecoratorType> child(new DecoratorType((args)...));
         node->setChild(child);
         return DecoratorBuilder<DecoratorBuilder<Parent>>(this, (DecoratorType*)child.get());
     }
@@ -265,28 +274,28 @@ public:
     template <class NodeType, typename... Args>
     Builder leaf(Args... args)
     {
-        root = std::make_shared<NodeType>((args)...);
+        root = shared_ptr<NodeType>(new NodeType((args)...));
         return *this;
     }
 
     template <class CompositeType, typename... Args>
     CompositeBuilder<Builder> composite(Args... args)
     {
-        root = std::make_shared<CompositeType>((args)...);
+        root = shared_ptr<CompositeType>(new CompositeType((args)...));
         return CompositeBuilder<Builder>(this, (CompositeType*)root.get());
     }
 
     template <class DecoratorType, typename... Args>
     DecoratorBuilder<Builder> decorator(Args... args)
     {
-        root = std::make_shared<DecoratorType>((args)...);
+        root = shared_ptr<DecoratorType>(new DecoratorType((args)...));
         return DecoratorBuilder<Builder>(this, (DecoratorType*)root.get());
     }
 
     Node::Ptr build()
     {
-        assert(root != nullptr && "The Behavior Tree is empty!");
-        auto tree = std::make_shared<BehaviorTree>();
+        //assert(root != nullptr && "The Behavior Tree is empty!");
+        auto tree = shared_ptr<BehaviorTree>(new BehaviorTree());
         tree->setRoot(root);
         return tree;
     }
@@ -309,7 +318,7 @@ public:
 
     Status update() override
     {
-        assert(hasChildren() && "Composite has no children");
+        //assert(hasChildren() && "Composite has no children");
 
         while (it != children.end()) {
             auto status = (*it)->tick();
@@ -339,7 +348,7 @@ public:
 
     Status update() override
     {
-        assert(hasChildren() && "Composite has no children");
+        //assert(hasChildren() && "Composite has no children");
 
         while (it != children.end()) {
             auto status = (*it)->tick();
@@ -364,7 +373,7 @@ class StatefulSelector : public Composite
 public:
     Status update() override
     {
-        assert(hasChildren() && "Composite has no children");
+        //assert(hasChildren() && "Composite has no children");
 
         while (it != children.end()) {
             auto status = (*it)->tick();
@@ -390,7 +399,7 @@ class MemSequence : public Composite
 public:
     Status update() override
     {
-        assert(hasChildren() && "Composite has no children");
+        //assert(hasChildren() && "Composite has no children");
 
         while (it != children.end()) {
             auto status = (*it)->tick();
@@ -415,7 +424,7 @@ public:
 
     Status update() override
     {
-        assert(hasChildren() && "Composite has no children");
+        //assert(hasChildren() && "Composite has no children");
 
         int minimumSuccess = minSuccess;
         int minimumFail = minFail;
